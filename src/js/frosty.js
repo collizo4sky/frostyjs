@@ -82,7 +82,6 @@
 
             this.$el.appendTo('body');
             var coords = this._getPosition();
-            coords = this._checkOverflow(coords);
             this.$el.detach().css(coords);
 
             if (this.options.hasArrow) { this._addArrowClass(); }
@@ -114,6 +113,7 @@
                     this.$el.appendTo('body');
                     this._checkContent();
                     this._setPosition();
+                    this._setPosition(); // consider the new coords causes a changed width/height of $el
                     this.options.onShown.call(this);
                     this.$anchor.triggerHandler('shown');
                     break;
@@ -191,6 +191,10 @@
             if (coords.top + this.$el.height() > $(window).height() + $(document).scrollTop()) { this.options.position = 'top'; overflowSpotted.bottom = true; }
             if (coords.left + this.$el.width() > $(window).width()) { this.options.position = 'left'; overflowSpotted.right = true; }
             if (this.options.position !== originalPosition) { coords = this._getNewCoords(); }
+
+            // recheck overflow left & top to consider overflow on both sides of an axis
+            if (coords.top < 0) { this.options.position = 'bottom'; overflowSpotted.top = true; }
+            if (coords.left < 0) { this.options.position = 'right'; overflowSpotted.left = true; }
 
             // exit if overflow at all positions
             if (Object.keys(overflowSpotted).length == 4) { console.error('frosty tootlip has no space to get opened!'); return coords; }
