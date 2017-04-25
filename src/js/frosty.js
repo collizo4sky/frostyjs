@@ -9,7 +9,7 @@
  *  Permission is hereby granted, free of charge, to any person obtaining a copy of this software
  *  and associated documentation files (the "Software"), to deal in the Software without restriction,
  *  including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense,
- *  and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, 
+ *  and/or sell copies of the Software, and to permit persons to whom the Software is furni shed to do so, 
  *  subject to the following conditions:
  *  
  *  The above copyright notice and this permission notice shall be included in all copies or 
@@ -82,7 +82,6 @@
 
             this.$el.appendTo('body');
             var coords = this._getPosition();
-            coords = this._checkOverflow(coords);
             this.$el.detach().css(coords);
 
             if (this.options.hasArrow) { this._addArrowClass(); }
@@ -114,6 +113,7 @@
                     this.$el.appendTo('body');
                     this._checkContent();
                     this._setPosition();
+                    this._setPosition(); // consider the new coords causes a changed width/height of $el
                     this.options.onShown.call(this);
                     this.$anchor.triggerHandler('shown');
                     break;
@@ -170,19 +170,40 @@
             return coords;
         },
 
+        _getNewCoords: function() {
+            var coords = this._getPosition();
+            this.$el.attr('class', this.options.classes);
+            this._addArrowClass();
+            return coords;
+        },
+
         _checkOverflow: function(coords) {
             if (!this.options.smartReposition) { return coords; }
             var originalPosition = this.options.position;
-            
-            if (coords.top < 0) { this.options.position = 'bottom'; }
-            if (coords.top + this.$el.height() > $(window).height()) { this.options.position = 'top'; }
-            if (coords.left < 0) { this.options.position = 'right'; }
-            if (coords.left + this.$el.width() > $(window).width()) { this.options.position = 'left'; }
+            var overflowSpotted = {};
 
-            if (this.options.position !== originalPosition) {
-                coords = this._getPosition();
-                this.$el.attr('class', this.options.classes);
-                this._addArrowClass();
+            // check overflow left & top
+            if (coords.top < 0) { this.options.position = 'bottom'; overflowSpotted.top = true; }
+            if (coords.left < 0) { this.options.position = 'right'; overflowSpotted.left = true; }
+            if (this.options.position !== originalPosition) { coords = this._getNewCoords(); }
+            
+            // check overflow right & bottom
+            if (coords.top + this.$el.height() > $(window).height() + $(document).scrollTop()) { this.options.position = 'top'; overflowSpotted.bottom = true; }
+            if (coords.left + this.$el.width() > $(window).width()) { this.options.position = 'left'; overflowSpotted.right = true; }
+            if (this.options.position !== originalPosition) { coords = this._getNewCoords(); }
+
+            // recheck overflow left & top to consider overflow on both sides of an axis
+            if (coords.top < 0) { this.options.position = 'bottom'; overflowSpotted.top = true; }
+            if (coords.left < 0) { this.options.position = 'right'; overflowSpotted.left = true; }
+
+            // exit if overflow at all positions
+            if (Object.keys(overflowSpotted).length == 4) { console.error('frosty tootlip has no space to get opened!'); return coords; }
+
+            // check overflow on the same axis
+            if (Object.keys(overflowSpotted).length == 2) {
+                if (overflowSpotted.left && overflowSpotted.right) { this.options.position = 'top'; }
+                if (overflowSpotted.top && overflowSpotted.bottom) { this.options.position = 'right'; }
+                coords = this._getNewCoords();
             }
 
             return coords;
